@@ -1,6 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { requireAdminSession, assertAdminSession } from "../../../../lib/adminAuth";
-import supabaseAdmin from "../../../../lib/supabaseAdmin";
+import { db, firebaseAdmin } from "../../../../lib/firebaseAdmin";
 import ClientActions from "./ClientActions";
 
 /* ─── Server Actions ──────────────────────────────── */
@@ -9,8 +9,8 @@ async function addClient(formData) {
   await assertAdminSession();
   const name = String(formData.get("name") || "").trim();
   if (!name) throw new Error("Client name is required.");
-  const { error } = await supabaseAdmin.from("clients").insert({ name, is_active: true });
-  if (error) throw new Error(error.message);
+  const now = new Date().toISOString();
+  await db.collection("clients").add({ name, is_active: true, created_at: now });
   revalidatePath("/admin/clients");
 }
 
@@ -21,8 +21,7 @@ async function editClient(formData) {
   const name     = String(formData.get("name") || "").trim();
   if (!clientId) throw new Error("Client ID is required.");
   if (!name)     throw new Error("Client name is required.");
-  const { error } = await supabaseAdmin.from("clients").update({ name }).eq("id", clientId);
-  if (error) throw new Error(error.message);
+  await db.collection("clients").doc(clientId).update({ name });
   revalidatePath("/admin/clients");
 }
 
@@ -31,9 +30,7 @@ async function deleteClient(formData) {
   await assertAdminSession();
   const clientId = String(formData.get("clientId") || "");
   if (!clientId) throw new Error("Client ID is required.");
-  // Soft-delete: mark inactive and add deleted_at, or hard-delete:
-  const { error } = await supabaseAdmin.from("clients").delete().eq("id", clientId);
-  if (error) throw new Error(error.message);
+  await db.collection("clients").doc(clientId).delete();
   revalidatePath("/admin/clients");
 }
 
@@ -43,8 +40,7 @@ async function toggleClientStatus(formData) {
   const clientId  = String(formData.get("clientId") || "");
   const nextValue = formData.get("nextValue") === "true";
   if (!clientId) throw new Error("Client id is required.");
-  const { error } = await supabaseAdmin.from("clients").update({ is_active: nextValue }).eq("id", clientId);
-  if (error) throw new Error(error.message);
+  await db.collection("clients").doc(clientId).update({ is_active: nextValue });
   revalidatePath("/admin/clients");
 }
 
@@ -64,10 +60,17 @@ function Avatar({ name }) {
 export default async function AdminClientsPage() {
   await requireAdminSession();
 
-  const { data: clients, error } = await supabaseAdmin
-    .from("clients")
-    .select("id, name, is_active, created_at")
-    .order("name", { ascending: true });
+  let clients = [];
+  let fetchError = null;
+
+  try {
+    const clientsSnap = await db.collection("clients").orderBy("name", "asc").get();
+    clientsSnap.forEach((doc) => {
+      clients.push({ id: doc.id, ...doc.data() });
+    });
+  } catch (err) {
+    fetchError = err;
+  }
 
   const active   = (clients || []).filter((c) => c.is_active).length;
   const inactive = (clients || []).filter((c) => !c.is_active).length;
@@ -150,10 +153,10 @@ export default async function AdminClientsPage() {
           </div>
 
           {/* List */}
-          {error ? (
+          {fetchError ? (
             <div className="px-6 py-5">
               <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-500">
-                Failed to load clients: {error.message}
+                Failed to load clients: {fetchError.message}
               </div>
             </div>
           ) : clients?.length ? (

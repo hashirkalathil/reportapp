@@ -1,14 +1,14 @@
 import DashboardTable from "../../../components/DashboardTable";
 import { requireAdminSession, assertAdminSession } from "../../../lib/adminAuth";
-import supabaseAdmin from "../../../lib/supabaseAdmin";
+import { db } from "../../../lib/firebaseAdmin";
 import { revalidatePath } from "next/cache";
 
 export const metadata = { title: "Dashboard — ReportGen Admin" };
 
-function normalizeReports(reports) {
+function normalizeReports(reports, clientsMap) {
   return (reports || []).map((r) => ({
     id: r.id,
-    clientName: r.clients?.name || "Unknown client",
+    clientName: clientsMap[r.client_id] || "Unknown client",
     reportMonth: r.report_month || "",
     status: r.status || "draft",
     updatedAt: r.updated_at || r.created_at || null,
@@ -22,17 +22,31 @@ export default async function AdminDashboardPage() {
     "use server";
     await assertAdminSession();
     if (!reportId) throw new Error("Report ID missing.");
-    const { error } = await supabaseAdmin.from("reports").delete().eq("id", reportId);
-    if (error) throw new Error(error.message);
+    await db.collection("reports").doc(reportId).delete();
     revalidatePath("/admin");
   }
 
-  const { data, error } = await supabaseAdmin
-    .from("reports")
-    .select(`id, report_month, status, updated_at, created_at, clients(name)`)
-    .order("updated_at", { ascending: false });
+  let normalized = [];
+  let fetchError = null;
 
-  const normalized = normalizeReports(data);
+  try {
+    const clientsSnap = await db.collection("clients").get();
+    const clientsMap = {};
+    clientsSnap.forEach((doc) => {
+      clientsMap[doc.id] = doc.data().name;
+    });
+
+    const reportsSnap = await db.collection("reports").orderBy("updated_at", "desc").get();
+    const rawReports = [];
+    reportsSnap.forEach((doc) => {
+      rawReports.push({ id: doc.id, ...doc.data() });
+    });
+
+    normalized = normalizeReports(rawReports, clientsMap);
+  } catch (err) {
+    fetchError = err;
+  }
+
   const totalDraft      = normalized.filter((r) => r.status === "draft").length;
   const totalSubmitted  = normalized.filter((r) => r.status === "submitted").length;
 
@@ -94,9 +108,9 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Error */}
-      {error && (
+      {fetchError && (
         <div className="mb-6 rounded-xl border border-red-100 bg-red-50 px-5 py-4 text-sm text-red-500">
-          <strong className="font-semibold">Error loading reports:</strong> {error.message}
+          <strong className="font-semibold">Error loading reports:</strong> {fetchError.message}
         </div>
       )}
 

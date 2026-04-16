@@ -9,7 +9,7 @@ import {
 } from "@react-pdf/renderer";
 import { NextResponse } from "next/server";
 import parseReportContent from "../../../lib/parseReportContent";
-import supabaseAdmin from "../../../lib/supabaseAdmin";
+import { db } from "../../../lib/firebaseAdmin";
 
 export const runtime = "nodejs";
 
@@ -257,17 +257,25 @@ export async function GET(request) {
     return NextResponse.json({ error: "Missing reportId" }, { status: 400 });
   }
 
-  const { data: report, error } = await supabaseAdmin
-    .from("reports")
-    .select(`id, report_month, content, created_at, updated_at, status, clients (name)`)
-    .eq("id", reportId)
-    .single();
+  let report, clientName = "Unknown Client";
 
-  if (error || !report) {
+  try {
+    const reportDoc = await db.collection("reports").doc(reportId).get();
+    if (!reportDoc.exists) throw new Error("Report not found");
+    
+    report = reportDoc.data();
+    report.id = reportDoc.id;
+
+    if (report.client_id) {
+      const clientDoc = await db.collection("clients").doc(report.client_id).get();
+      if (clientDoc.exists) {
+        clientName = clientDoc.data().name || "Unknown Client";
+      }
+    }
+  } catch (error) {
     return NextResponse.json({ error: "Report not found" }, { status: 404 });
   }
 
-  const clientName = getClientName(report);
   const blocks = parseReportContent(report.content);
   // Only show a final submission date if it's actually submitted
   const submissionDate = report.status === 'submitted' ? report.updated_at : null;

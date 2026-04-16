@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import supabaseAdmin from "../../../lib/supabaseAdmin";
+import { db } from "../../../lib/firebaseAdmin";
 
 export const runtime = "nodejs";
 
@@ -15,19 +15,32 @@ export async function GET(request) {
     return badRequest("Missing clientId or reportMonth.");
   }
 
-  const { data, error } = await supabaseAdmin
-    .from("reports")
-    .select("id, content, status, updated_at")
-    .eq("client_id", clientId)
-    .eq("report_month", reportMonth)
-    .eq("status", "draft")
-    .maybeSingle();
+  try {
+    const snapshot = await db.collection("reports")
+      .where("client_id", "==", clientId)
+      .where("report_month", "==", reportMonth)
+      .where("status", "==", "draft")
+      .limit(1)
+      .get();
 
-  if (error) {
+    if (snapshot.empty) {
+      return NextResponse.json({ report: null });
+    }
+
+    const doc = snapshot.docs[0];
+    const data = doc.data();
+
+    return NextResponse.json({ 
+      report: { 
+        id: doc.id, 
+        content: data.content, 
+        status: data.status, 
+        updated_at: data.updated_at 
+      } 
+    });
+  } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  return NextResponse.json({ report: data || null });
 }
 
 export async function POST(request) {
@@ -50,38 +63,38 @@ export async function POST(request) {
     return badRequest("Missing clientId or reportMonth.");
   }
 
-  const { data: existingReport, error: existingError } = await supabaseAdmin
-    .from("reports")
-    .select("id, content, status, updated_at")
-    .eq("client_id", clientId)
-    .eq("report_month", reportMonth)
-    .eq("status", "draft")
-    .maybeSingle();
+  try {
+    const snapshot = await db.collection("reports")
+      .where("client_id", "==", clientId)
+      .where("report_month", "==", reportMonth)
+      .where("status", "==", "draft")
+      .limit(1)
+      .get();
 
-  if (existingError) {
-    return NextResponse.json({ error: existingError.message }, { status: 500 });
-  }
+    if (!snapshot.empty) {
+      const doc = snapshot.docs[0];
+      const data = doc.data();
+      return NextResponse.json({ 
+        report: { id: doc.id, content: data.content, status: data.status, updated_at: data.updated_at } 
+      });
+    }
 
-  if (existingReport) {
-    return NextResponse.json({ report: existingReport });
-  }
-
-  const { data, error } = await supabaseAdmin
-    .from("reports")
-    .insert({
+    const now = new Date().toISOString();
+    const newDocRef = await db.collection("reports").add({
       client_id: clientId,
       report_month: reportMonth,
       content,
       status: "draft",
-    })
-    .select("id, content, status, updated_at")
-    .single();
+      created_at: now,
+      updated_at: now
+    });
 
-  if (error) {
+    return NextResponse.json({ 
+      report: { id: newDocRef.id, content, status: "draft", updated_at: now } 
+    });
+  } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  return NextResponse.json({ report: data });
 }
 
 export async function PUT(request) {
@@ -103,29 +116,28 @@ export async function PUT(request) {
     return badRequest("Missing reportId, clientId, or reportMonth.");
   }
 
-  const updatePayload = {
-    client_id: clientId,
-    report_month: reportMonth,
-  };
+  try {
+    const now = new Date().toISOString();
+    const updatePayload = {
+      client_id: clientId,
+      report_month: reportMonth,
+      updated_at: now
+    };
 
-  if (content !== undefined) {
-    updatePayload.content = content;
-  }
+    if (content !== undefined) {
+      updatePayload.content = content;
+    }
 
-  if (status) {
-    updatePayload.status = status;
-  }
+    if (status) {
+      updatePayload.status = status;
+    }
 
-  const { data, error } = await supabaseAdmin
-    .from("reports")
-    .update(updatePayload)
-    .eq("id", reportId)
-    .select("id, updated_at, status")
-    .single();
+    await db.collection("reports").doc(reportId).update(updatePayload);
 
-  if (error) {
+    return NextResponse.json({ 
+      report: { id: reportId, updated_at: now, status: status || "draft" } 
+    });
+  } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  return NextResponse.json({ report: data });
 }

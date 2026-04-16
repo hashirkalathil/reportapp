@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import supabaseAdmin from "../../../../lib/supabaseAdmin";
+import { db } from "../../../../lib/firebaseAdmin";
 
 export const runtime = "nodejs";
 
@@ -10,19 +10,18 @@ export async function GET(request) {
     return NextResponse.json({ months: [] });
   }
 
-  const { data, error } = await supabaseAdmin
-    .from("reports")
-    .select("report_month, status")
-    .eq("client_id", clientId);
+  try {
+    const snapshot = await db.collection("reports")
+      .where("client_id", "==", clientId)
+      .get();
 
-  if (error) {
+    const months = snapshot.docs.map((doc) => ({
+      month: doc.data().report_month,
+      status: doc.data().status,
+    }));
+
+    return NextResponse.json({ months });
+  } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  const months = (data || []).map((r) => ({
-    month: r.report_month,
-    status: r.status,
-  }));
-
-  return NextResponse.json({ months });
 }

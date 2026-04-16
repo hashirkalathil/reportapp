@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminSession } from "../../../../lib/adminAuth";
-import supabaseAdmin from "../../../../lib/supabaseAdmin";
+import { db } from "../../../../lib/firebaseAdmin";
 
 export const runtime = "nodejs";
 
@@ -13,31 +13,37 @@ export async function GET(request, { params }) {
     return NextResponse.json({ error: "Missing report id." }, { status: 400 });
   }
 
-  const { data, error } = await supabaseAdmin
-    .from("reports")
-    .select(
-      `
-        id,
-        report_month,
-        status,
-        content,
-        updated_at,
-        created_at,
-        clients (
-          name
-        )
-      `
-    )
-    .eq("id", id)
-    .single();
+  try {
+    const reportDoc = await db.collection("reports").doc(id).get();
+    if (!reportDoc.exists) {
+      return NextResponse.json({ error: "Report not found." }, { status: 404 });
+    }
 
-  if (error) {
+    const reportData = reportDoc.data();
+    
+    // Simulate Supabase "clients (name)" join relationship
+    let clientName = "Unknown client";
+    if (reportData.client_id) {
+      const clientDoc = await db.collection("clients").doc(reportData.client_id).get();
+      if (clientDoc.exists) {
+        clientName = clientDoc.data().name || "Unknown client";
+      }
+    }
+
+    const data = {
+      id: reportDoc.id,
+      report_month: reportData.report_month,
+      status: reportData.status,
+      content: reportData.content,
+      updated_at: reportData.updated_at,
+      created_at: reportData.created_at,
+      clients: {
+        name: clientName
+      }
+    };
+
+    return NextResponse.json({ report: data });
+  } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  if (!data) {
-    return NextResponse.json({ error: "Report not found." }, { status: 404 });
-  }
-
-  return NextResponse.json({ report: data });
 }

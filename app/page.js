@@ -1,11 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react';
+
 import { useShallow } from 'zustand/react/shallow';
 import SelectionGate from '../components/SelectionGate';
 import EditorWorkspace from '../components/EditorWorkspace';
 import useReportStore from '../store/useReportStore';
-import supabase from '../lib/supabaseClient';
 import { mapValuesToTiptap, mapTiptapToValues } from '../lib/reportMapping';
 
 /* ──────────────────────────── field schema ──────────────────────────── */
@@ -301,18 +301,20 @@ export default function ReportFormPage() {
   useEffect(() => {
     async function loadClients() {
       setIsLoadingClients(true);
-      const { data, error } = await supabase
-        .from("clients")
-        .select("id, name")
-        .eq("is_active", true)
-        .order("name", { ascending: true });
-
-      if (error) {
+      try {
+        const response = await fetch('/api/clients');
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || "Request failed");
+        }
+        
+        setClients(data.clients || []);
+      } catch (error) {
         setClientsError(error.message || "Unable to load clients.");
-      } else {
-        setClients(data || []);
+      } finally {
+        setIsLoadingClients(false);
       }
-      setIsLoadingClients(false);
     }
     loadClients();
   }, []);
