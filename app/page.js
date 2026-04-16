@@ -1,65 +1,470 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import SelectionGate from '../components/SelectionGate';
+import EditorWorkspace from '../components/EditorWorkspace';
+import useReportStore from '../store/useReportStore';
+import supabase from '../lib/supabaseClient';
+import { mapValuesToTiptap, mapTiptapToValues } from '../lib/reportMapping';
+
+/* ──────────────────────────── field schema ──────────────────────────── */
+
+const FIELDS = [
+  {
+    id: 'academic_activities',
+    number: 1,
+    label: 'Academic Activities',
+    type: 'textarea',
+  },
+  {
+    id: 'cocurricular_activities',
+    number: 2,
+    label: 'Co-curricular Activities',
+    type: 'textarea',
+    hints: ['Class Union', 'Ahsan Contest', 'External Contest'],
+  },
+  {
+    id: 'action_weak_section',
+    number: 3,
+    label: 'Action for the Weak Section',
+    type: 'group',
+    children: [
+      { id: 'action_weak_academic', label: 'Academic Activities' },
+      { id: 'action_weak_cocurricular', label: 'Co-curricular Activities' },
+    ],
+  },
+  {
+    id: 'behavioural_change',
+    number: 4,
+    label: 'Behavioural Change',
+    type: 'textarea',
+  },
+  {
+    id: 'personal_care',
+    number: 5,
+    label: 'Personal Care',
+    type: 'textarea',
+  },
+  {
+    id: 'health',
+    number: 6,
+    label: 'Health',
+    type: 'group',
+    children: [
+      { id: 'health_mental', label: 'Mental Health' },
+      { id: 'health_physical', label: 'Physical Health' },
+    ],
+  },
+  {
+    id: 'hygiene',
+    number: 7,
+    label: 'Hygiene',
+    type: 'group',
+    children: [
+      { id: 'hygiene_personal', label: 'Personal' },
+      { id: 'hygiene_spaces', label: 'Spaces' },
+      { id: 'hygiene_sick', label: 'Sick' },
+    ],
+  },
+  {
+    id: 'documentation',
+    number: 8,
+    label: 'Documentation',
+    type: 'textarea',
+  },
+  {
+    id: 'annual_goals',
+    number: 9,
+    label: 'Annual Goals',
+    type: 'textarea',
+  },
+  {
+    id: 'others',
+    number: 10,
+    label: 'Others',
+    type: 'textarea',
+  },
+];
+
+function allTextareaKeys() {
+  const keys = [];
+  for (const field of FIELDS) {
+    if (field.type === 'textarea') {
+      keys.push(field.id);
+    } else if (field.type === 'group') {
+      for (const child of field.children) {
+        keys.push(child.id);
+      }
+    }
+  }
+  return keys;
+}
+
+const ALL_KEYS = allTextareaKeys();
+
+function getMonthOptions() {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+  const now = new Date();
+  const months = [];
+  for (let index = 0; index < 12; index += 1) {
+    const date = new Date(now.getFullYear(), now.getMonth() - index, 1);
+    months.push(formatter.format(date));
+  }
+  return months;
+}
+
+/* ──────────────────────────── components ──────────────────────────── */
+
+const CharCount = memo(function CharCount({ value }) {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.js file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <span className="pointer-events-none select-none text-[10px] tabular-nums text-gray-400 dark:text-neutral-600 font-medium">
+      {value.length} characters
+    </span>
+  );
+});
+
+const HintPills = memo(function HintPills({ hints }) {
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {hints.map((hint) => (
+        <span
+          key={hint}
+          className="rounded-full border border-gray-100 bg-gray-50 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-gray-500"
+        >
+          {hint}
+        </span>
+      ))}
     </div>
+  );
+});
+
+const ReportTextarea = memo(function ReportTextarea({ id, value, onChange, placeholder }) {
+  return (
+    <div className="space-y-2">
+      <textarea
+        id={id}
+        value={value}
+        onChange={(e) => onChange(id, e.target.value)}
+        placeholder={placeholder || 'Write your report here…'}
+        rows={4}
+        className="w-full resize-y rounded-xl border border-gray-100 bg-gray-50/30 px-4 py-3 text-sm leading-relaxed text-gray-900 outline-none transition-all placeholder:text-gray-300 focus:border-indigo-500/30 focus:bg-white"
+      />
+      <div className="flex justify-end pr-1">
+        <CharCount value={value} />
+      </div>
+    </div>
+  );
+});
+
+const FieldCard = memo(function FieldCard({ field, values, onChange }) {
+  const isGroup = field.type === 'group';
+
+  const relevantKeys = isGroup
+    ? field.children.map((c) => c.id)
+    : [field.id];
+  const cardValues = {};
+  for (const key of relevantKeys) {
+    cardValues[key] = values[key] || '';
+  }
+
+  return (
+    <div className="group space-y-4">
+      <div className="flex items-center gap-3">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-gray-900 text-[10px] font-bold text-white">
+          {field.number}
+        </span>
+        <label
+          htmlFor={!isGroup ? field.id : undefined}
+          className="text-sm font-bold tracking-tight text-gray-900 uppercase"
+        >
+          {field.label}
+        </label>
+      </div>
+
+      {field.hints && <HintPills hints={field.hints} />}
+
+      <div className={isGroup ? "space-y-6 pl-9 border-l border-gray-100" : ""}>
+        {!isGroup ? (
+          <ReportTextarea
+            id={field.id}
+            value={cardValues[field.id]}
+            onChange={onChange}
+          />
+        ) : (
+          field.children.map((child) => (
+            <div key={child.id} className="space-y-2">
+              <label
+                htmlFor={child.id}
+                className="block text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400"
+              >
+                {child.label}
+              </label>
+              <ReportTextarea
+                id={child.id}
+                value={cardValues[child.id]}
+                onChange={onChange}
+                placeholder={`Write about ${child.label.toLowerCase()}…`}
+              />
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  if (prevProps.onChange !== nextProps.onChange) return false;
+  if (prevProps.field !== nextProps.field) return false;
+
+  const keys = prevProps.field.type === 'group'
+    ? prevProps.field.children.map((c) => c.id)
+    : [prevProps.field.id];
+
+  for (const key of keys) {
+    if (prevProps.values[key] !== nextProps.values[key]) return false;
+  }
+  return true;
+});
+
+/* ──────────────────────────── page ──────────────────────────── */
+
+export default function ReportFormPage() {
+  const monthOptions = useMemo(() => getMonthOptions(), []);
+  
+  // App State
+  const [values, setValues] = useState({});
+  const [hydrated, setHydrated] = useState(false);
+  const [clients, setClients] = useState([]);
+  const [isLoadingClients, setIsLoadingClients] = useState(true);
+  const [clientsError, setClientsError] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState(monthOptions[0] || "");
+  const [submitMessage, setSubmitMessage] = useState('');
+
+  const timerRef = useRef(null);
+  const lastSyncId = useRef(null);
+
+  const {
+    clientId,
+    clientName,
+    reportMonth,
+    content,
+    status,
+    isSaving,
+    lastSaved,
+    setSelection,
+    initReport,
+    setContent,
+    autosave,
+    submitReport,
+  } = useReportStore(
+    useShallow((state) => ({
+      clientId: state.clientId,
+      clientName: state.clientName,
+      reportMonth: state.reportMonth,
+      content: state.content,
+      status: state.status,
+      isSaving: state.isSaving,
+      lastSaved: state.lastSaved,
+      setSelection: state.setSelection,
+      initReport: state.initReport,
+      setContent: state.setContent,
+      autosave: state.autosave,
+      submitReport: state.submitReport,
+    }))
+  );
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (clientId) setSelectedClientId(clientId);
+    if (reportMonth) setSelectedMonth(reportMonth);
+    
+    const currentSelection = `${clientId}:${reportMonth}`;
+    if (clientId && content && lastSyncId.current !== currentSelection) {
+      const serverValues = mapTiptapToValues(content, FIELDS);
+      if (Object.keys(serverValues).length > 0) {
+        setValues(serverValues);
+      } else {
+        setValues({});
+      }
+      lastSyncId.current = currentSelection;
+    }
+  }, [clientId, reportMonth, content]);
+
+  // Client Loading
+  useEffect(() => {
+    async function loadClients() {
+      setIsLoadingClients(true);
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name", { ascending: true });
+
+      if (error) {
+        setClientsError(error.message || "Unable to load clients.");
+      } else {
+        setClients(data || []);
+      }
+      setIsLoadingClients(false);
+    }
+    loadClients();
+  }, []);
+
+  const scheduleSave = useCallback((nextValues) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async () => {
+      try {
+        const tiptapJson = mapValuesToTiptap(nextValues, FIELDS);
+        setContent(tiptapJson);
+        await autosave();
+      } catch (err) {
+        console.error("Autosave failed:", err);
+      }
+    }, 800);
+  }, [setContent, autosave]);
+
+  function handleChange(id, text) {
+    setSubmitMessage('');
+    const next = { ...values, [id]: text };
+    setValues(next);
+    scheduleSave(next);
+  }
+
+  async function handleStartReport() {
+    const selectedClient = clients.find((client) => client.id === selectedClientId);
+    if (!selectedClient || !selectedMonth) return;
+    
+    setSelection(selectedClient.id, selectedClient.name, selectedMonth);
+    await initReport();
+  }
+
+  function handleChangeSelection() {
+    const hasContent = ALL_KEYS.some((key) => (values[key] || '').trim().length > 0);
+    if (hasContent) {
+      const confirmed = window.confirm("You have progress. Do you want to change the selection?");
+      if (!confirmed) return;
+    }
+    setSelection(null, "", "");
+  }
+
+  function handleClearAll() {
+    if (!window.confirm('Clear all fields? This cannot be undone.')) return;
+    const empty = {};
+    setValues(empty);
+    
+    setContent(mapValuesToTiptap(empty, FIELDS));
+    autosave();
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    const hasContent = ALL_KEYS.some((key) => (values[key] || '').trim().length > 0);
+    if (!hasContent) {
+      setSubmitMessage('error:Please fill in at least one field.');
+      return;
+    }
+
+    const tiptapJson = mapValuesToTiptap(values, FIELDS);
+    setContent(tiptapJson);
+    await autosave();
+
+    const result = await submitReport();
+    if (result) {
+      setSubmitMessage('success:Report submitted successfully!');
+      setTimeout(() => {
+        setValues({});
+        setContent(mapValuesToTiptap({}, FIELDS));
+        setSelection(null, "", "");
+        setTimeout(() => setSubmitMessage(''), 4000);
+      }, 1500);
+    } else {
+      setSubmitMessage('error:Submission failed. Please try again.');
+    }
+  }
+
+  if (!hydrated) return null;
+
+  return (
+    <>
+      {!clientId ? (
+        <div className="min-h-screen bg-gray-50/50">
+           <SelectionGate
+            clients={clients}
+            isLoading={isLoadingClients}
+            onStart={handleStartReport}
+            selectedClientId={selectedClientId}
+            setSelectedClientId={setSelectedClientId}
+            selectedMonth={selectedMonth}
+            setSelectedMonth={setSelectedMonth}
+            mouthOptions={monthOptions}
+          />
+          {clientsError && (
+             <div className="fixed bottom-8 left-1/2 -translate-x-1/2 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-medium border border-red-100">
+               {clientsError}
+             </div>
+          )}
+          {submitMessage && submitMessage.startsWith('success') && (
+             <div className="fixed top-8 left-1/2 -translate-x-1/2 px-6 py-3 bg-emerald-50 text-emerald-600 rounded-xl text-sm font-bold border border-emerald-100 shadow-[0_4px_24px_rgba(16,185,129,0.15)] z-50 animate-bounce">
+               {submitMessage.split(':')[1]}
+             </div>
+          )}
+        </div>
+      ) : (
+        <EditorWorkspace
+          status={status}
+          isSaving={isSaving}
+          lastSaved={lastSaved}
+          clientName={clientName}
+          reportMonth={reportMonth}
+          onChangeSelection={handleChangeSelection}
+        >
+          <form onSubmit={handleSubmit} className="space-y-12">
+            <div className="space-y-16">
+              {FIELDS.map((field) => (
+                <FieldCard
+                  key={field.id}
+                  field={field}
+                  values={values}
+                  onChange={handleChange}
+                />
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between border-t border-gray-100 pt-10">
+              <button
+                type="button"
+                onClick={handleClearAll}
+                className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-red-500 transition-colors"
+                disabled={isSaving}
+              >
+                Clear All Data
+              </button>
+
+              <div className="flex items-center gap-4">
+                {submitMessage && (
+                  <span className={`text-xs font-bold uppercase tracking-wider ${submitMessage.startsWith('error') ? 'text-red-500' : 'text-emerald-500'}`}>
+                    {submitMessage.split(':')[1]}
+                  </span>
+                )}
+                <button
+                  type="submit"
+                  disabled={isSaving || status === 'submitted'}
+                  className="rounded-xl bg-[#5D5FEF] px-8 py-3.5 text-xs font-bold uppercase tracking-[0.2em] text-white shadow-md shadow-indigo-200/50 transition-all hover:bg-indigo-600 disabled:opacity-50"
+                >
+                  {status === 'submitted' ? 'Submitted' : 'Submit Report'}
+                </button>
+              </div>
+            </div>
+          </form>
+        </EditorWorkspace>
+      )}
+    </>
   );
 }
