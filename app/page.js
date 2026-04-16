@@ -103,19 +103,7 @@ function allTextareaKeys() {
 
 const ALL_KEYS = allTextareaKeys();
 
-function getMonthOptions() {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    year: "numeric",
-  });
-  const now = new Date();
-  const months = [];
-  for (let index = 0; index < 12; index += 1) {
-    const date = new Date(now.getFullYear(), now.getMonth() - index, 1);
-    months.push(formatter.format(date));
-  }
-  return months;
-}
+// (Static month generation has been moved to customizable Admin Panels)
 
 /* ──────────────────────────── components ──────────────────────────── */
 
@@ -232,16 +220,15 @@ const FieldCard = memo(function FieldCard({ field, values, onChange }) {
 /* ──────────────────────────── page ──────────────────────────── */
 
 export default function ReportFormPage() {
-  const monthOptions = useMemo(() => getMonthOptions(), []);
-  
   // App State
   const [values, setValues] = useState({});
   const [hydrated, setHydrated] = useState(false);
   const [clients, setClients] = useState([]);
+  const [monthOptions, setMonthOptions] = useState([]);
   const [isLoadingClients, setIsLoadingClients] = useState(true);
   const [clientsError, setClientsError] = useState("");
   const [selectedClientId, setSelectedClientId] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState(monthOptions[0] || "");
+  const [selectedMonth, setSelectedMonth] = useState("");
   const [submitMessage, setSubmitMessage] = useState('');
 
   const timerRef = useRef(null);
@@ -297,27 +284,39 @@ export default function ReportFormPage() {
     }
   }, [clientId, reportMonth, content]);
 
-  // Client Loading
+  // Initial Data Loading
   useEffect(() => {
-    async function loadClients() {
+    async function loadInitialData() {
       setIsLoadingClients(true);
       try {
-        const response = await fetch('/api/clients');
-        const data = await response.json();
+        const [clientsRes, monthsRes] = await Promise.all([
+          fetch('/api/clients'),
+          fetch('/api/months')
+        ]);
         
-        if (!response.ok) {
-          throw new Error(data.error || "Request failed");
+        const clientsData = await clientsRes.json();
+        const monthsData = await monthsRes.json();
+        
+        if (!clientsRes.ok) throw new Error(clientsData.error || "Failed to load clients");
+        if (!monthsRes.ok) throw new Error(monthsData.error || "Failed to load periods");
+        
+        const activeClients = clientsData.clients || [];
+        const activeMonths = monthsData.months || [];
+
+        setClients(activeClients);
+        setMonthOptions(activeMonths);
+
+        if (!selectedMonth && activeMonths.length > 0) {
+          setSelectedMonth(activeMonths[0]);
         }
-        
-        setClients(data.clients || []);
       } catch (error) {
-        setClientsError(error.message || "Unable to load clients.");
+        setClientsError(error.message || "Unable to load gate data.");
       } finally {
         setIsLoadingClients(false);
       }
     }
-    loadClients();
-  }, []);
+    loadInitialData();
+  }, [selectedMonth]);
 
   const scheduleSave = useCallback((nextValues) => {
     if (timerRef.current) clearTimeout(timerRef.current);
