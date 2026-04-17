@@ -69,7 +69,7 @@ export async function POST(request) {
     name: ADMIN_SESSION_COOKIE,
     value: sessionToken,
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     path: "/",
     maxAge: ADMIN_SESSION_TTL_SECONDS,
