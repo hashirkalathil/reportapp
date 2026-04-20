@@ -79,11 +79,7 @@ export default async function AdminClientsPage() {
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <div className="mb-6 sm:mb-8">
-        <p className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-[#5D5FEF]">Management</p>
-        <h1 className="mt-1 text-xl sm:text-2xl font-bold tracking-tight text-gray-800">Clients</h1>
-        <p className="mt-1 text-sm text-gray-400">
-          Manage client accounts — add, rename, activate, or remove clients.
-        </p>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-800">Clients</h1>
       </div>
 
       {/* Quick stats */}
@@ -117,7 +113,6 @@ export default async function AdminClientsPage() {
             </div>
             <div>
               <h2 className="text-sm font-bold text-gray-800">Add New Client</h2>
-              <p className="text-xs text-gray-400">Client will be active by default</p>
             </div>
           </div>
 
@@ -148,7 +143,6 @@ export default async function AdminClientsPage() {
           <div className="flex items-center justify-between border-b border-gray-50 px-5 sm:px-6 py-4">
             <div>
               <h2 className="text-sm font-bold text-gray-800">All Clients</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Click Edit to rename · Delete to remove permanently</p>
             </div>
           </div>
 

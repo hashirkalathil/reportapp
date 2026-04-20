@@ -105,7 +105,6 @@ export default async function FormDetailsPage({ params }) {
              <div className="border-b border-gray-50 px-6 py-5 flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-bold text-gray-800">Question Schema</h2>
-                  <p className="text-xs text-gray-400">Structural definition of the report form</p>
                 </div>
                 <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-[#5D5FEF]">
                    {normalizedFields.length} Sections
@@ -158,7 +157,6 @@ export default async function FormDetailsPage({ params }) {
                    </div>
                 ))}
 
-                {/* Less-Click: Inline Adder */}
                 <QuickQuestionAdder form={form} />
              </div>
           </section>

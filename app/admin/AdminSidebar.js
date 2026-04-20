@@ -51,7 +51,7 @@ export default function AdminSidebar() {
   }
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col bg-[#1C2434] min-h-screen">
+    <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col bg-[#1C2434] overflow-y-auto">
       {/* Brand */}
       <div className="flex items-center gap-3 px-6 py-7">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#5D5FEF]">
@@ -63,7 +63,7 @@ export default function AdminSidebar() {
         </div>
         <div>
           <p className="text-[0.6rem] font-bold uppercase tracking-[0.15em] text-[#5D5FEF]">Admin</p>
-          <p className="text-sm font-bold text-white">ReportGen</p>
+          <p className="text-sm font-bold text-white">Report Generator</p>
         </div>
       </div>
 
@@ -107,17 +107,6 @@ export default function AdminSidebar() {
 
       {/* Spacer */}
       <div className="flex-1" />
-
-      {/* Footer help card */}
-      <div className="mx-4 mb-4 rounded-2xl bg-white/5 p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5D5FEF" strokeWidth="2" strokeLinecap="round">
-            <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
-          <p className="text-xs font-semibold text-white/70">Having troubles?</p>
-        </div>
-        <p className="text-[0.68rem] text-white/30 leading-relaxed">Contact your system administrator for help with access issues.</p>
-      </div>
 
       {/* Divider */}
       <div className="mx-4 h-px bg-white/6" />

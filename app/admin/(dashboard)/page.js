@@ -65,11 +65,7 @@ export default async function AdminDashboardPage() {
   return (
     <div className="p-6 lg:p-8">
       <div className="mb-8">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#5D5FEF]">Overview</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-800">Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-400">
-          View, filter, and export generated reports across all clients.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight text-gray-800">Dashboard</h1>
       </div>
 
       {/* Big stat cards row */}
@@ -125,7 +121,6 @@ export default async function AdminDashboardPage() {
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-gray-800">Active Reports</h2>
-              <p className="text-xs text-gray-400">Finalized and submitted reports ready for review.</p>
             </div>
           </div>
           <DashboardTable reports={activeReports} deleteReportAction={deleteReport} />
@@ -135,7 +130,6 @@ export default async function AdminDashboardPage() {
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-gray-800">Draft Reports</h2>
-              <p className="text-xs text-gray-400">In-progress reports that haven't been finalized yet.</p>
             </div>
           </div>
           <DashboardTable reports={draftReports} deleteReportAction={deleteReport} />

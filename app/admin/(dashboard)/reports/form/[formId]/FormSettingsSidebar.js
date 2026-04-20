@@ -74,7 +74,6 @@ export default function FormSettingsSidebar({ form }) {
         </div>
 
         <div className="pt-2 border-t border-gray-50 flex items-center justify-between">
-           <p className="text-[10px] text-gray-300">Click status to toggle instantly</p>
            {isPending && <div className="h-3 w-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>}
         </div>
       </div>

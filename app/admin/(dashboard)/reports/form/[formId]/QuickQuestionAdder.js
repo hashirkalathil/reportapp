@@ -66,7 +66,6 @@ export default function QuickQuestionAdder({ form }) {
             )}
           </button>
         </div>
-        <p className="mt-2 text-[10px] text-gray-400">Adds a standard paragraph question to the end of the form.</p>
       </form>
     </div>
   );
