@@ -165,14 +165,14 @@ function getClientName(report) {
   return "Unknown Client";
 }
 
-function PdfReportDocument({ clientName, reportMonth, submissionDate, blocks }) {
+function PdfReportDocument({ clientName, formName, submissionDate, blocks }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         {/* Fixed Header */}
         <View style={styles.header} fixed>
           <Text style={styles.headerText}>ReportGen Pro</Text>
-          <Text style={styles.headerText}>{reportMonth}</Text>
+          <Text style={styles.headerText}>{formName}</Text>
         </View>
 
         {/* Cover Section */}
@@ -180,8 +180,8 @@ function PdfReportDocument({ clientName, reportMonth, submissionDate, blocks }) 
           <Text style={styles.title}>{clientName}</Text>
           
           <View style={styles.subtitleRow}>
-            <Text style={styles.subtitleLabel}>Period</Text>
-            <Text style={styles.subtitleValue}>{reportMonth}</Text>
+            <Text style={styles.subtitleLabel}>Template</Text>
+            <Text style={styles.subtitleValue}>{formName}</Text>
           </View>
           
           <View style={styles.subtitleRow}>
@@ -257,7 +257,7 @@ export async function GET(request) {
     return NextResponse.json({ error: "Missing reportId" }, { status: 400 });
   }
 
-  let report, clientName = "Unknown Client";
+  let report, clientName = "Unknown Client", formName = "Default Monthly Form";
 
   try {
     const reportDoc = await db.collection("reports").doc(reportId).get();
@@ -272,6 +272,13 @@ export async function GET(request) {
         clientName = clientDoc.data().name || "Unknown Client";
       }
     }
+
+    if (report.form_id) {
+      const formDoc = await db.collection("report_forms").doc(report.form_id).get();
+      if (formDoc.exists) {
+        formName = formDoc.data().name || "Default Monthly Form";
+      }
+    }
   } catch (error) {
     return NextResponse.json({ error: "Report not found" }, { status: 404 });
   }
@@ -283,13 +290,13 @@ export async function GET(request) {
   const buffer = await pdf(
     <PdfReportDocument
       clientName={clientName}
-      reportMonth={report.report_month}
+      formName={formName}
       submissionDate={submissionDate}
       blocks={blocks}
     />
   ).toBuffer();
 
-  const filename = `report-${sanitizeFilenamePart(clientName)}-${sanitizeFilenamePart(report.report_month)}.pdf`;
+  const filename = `report-${sanitizeFilenamePart(clientName)}-${sanitizeFilenamePart(formName)}.pdf`;
 
   return new Response(buffer, {
     status: 200,

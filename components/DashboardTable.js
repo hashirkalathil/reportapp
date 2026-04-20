@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from "react";
+import Link from "next/link";
 import ReportPreviewModal from "./ReportPreviewModal";
 
 /* ── helpers ────────────────────────── */
@@ -90,11 +91,11 @@ export default function DashboardTable({ reports, deleteReportAction }) {
     });
 
   const handleSort = useCallback((key) => setSort((s) => getNextSort(s, key)), []);
-  const openPreview = useCallback((r) => setPreview({ id: r.id, clientName: r.clientName, reportMonth: r.reportMonth }), []);
+  const openPreview = useCallback((r) => setPreview({ id: r.id, clientName: r.clientName }), []);
   const closePreview = useCallback(() => setPreview(null), []);
 
   async function handleDelete(report) {
-    if (!window.confirm(`Are you sure you want to delete the report for ${report.clientName} (${report.reportMonth})?`)) return;
+    if (!window.confirm(`Are you sure you want to delete the report for ${report.clientName} (${report.formName})?`)) return;
     setDeletingId(report.id);
     try {
       await deleteReportAction(report.id);
@@ -127,7 +128,6 @@ export default function DashboardTable({ reports, deleteReportAction }) {
               />
             </div>
 
-            {/* Status filter */}
             <select
               value={statusFilter}
               onChange={(e) => setStatus(e.target.value)}
@@ -154,7 +154,7 @@ export default function DashboardTable({ reports, deleteReportAction }) {
                   <SortButton label="Client" sortKey="clientName" currentSort={sort} onSort={handleSort} />
                 </th>
                 <th className="px-6 py-3.5 text-left">
-                  <SortButton label="Month" sortKey="reportMonth" currentSort={sort} onSort={handleSort} />
+                  <SortButton label="Form" sortKey="formName" currentSort={sort} onSort={handleSort} />
                 </th>
                 <th className="px-6 py-3.5 text-left">
                   <SortButton label="Status" sortKey="status" currentSort={sort} onSort={handleSort} />
@@ -173,27 +173,25 @@ export default function DashboardTable({ reports, deleteReportAction }) {
                 filtered.map((report) => (
                   <tr key={report.id} className="group transition-colors hover:bg-gray-50/60">
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
+                      <Link href={`/admin/reports/${report.id}`} className="flex items-center gap-3 group/link">
                         <ClientAvatar name={report.clientName} />
-                        <span className="font-semibold text-gray-800">{report.clientName}</span>
-                      </div>
+                        <span className="font-semibold text-gray-800 group-hover/link:text-[#5D5FEF] transition-colors">{report.clientName}</span>
+                      </Link>
                     </td>
-                    <td className="px-6 py-4 tabular-nums text-gray-500">{report.reportMonth || "—"}</td>
+                    <td className="px-6 py-4 text-gray-500 font-medium">{report.formName}</td>
                     <td className="px-6 py-4"><StatusBadge status={report.status} /></td>
                     <td className="px-6 py-4 text-xs tabular-nums text-gray-400">{formatDate(report.updatedAt)}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openPreview(report)}
-                          aria-label={`Preview report for ${report.clientName}`}
+                        <Link
+                          href={`/admin/reports/${report.id}`}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-[#5D5FEF]/20 bg-[#5D5FEF]/5 px-3.5 py-1.5 text-xs font-semibold text-[#5D5FEF] transition hover:border-[#5D5FEF]/40 hover:bg-[#5D5FEF]/10"
                         >
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
                           </svg>
-                          Preview
-                        </button>
+                          View Detail
+                        </Link>
                         <button
                           type="button"
                           onClick={() => handleDelete(report)}
@@ -244,7 +242,6 @@ export default function DashboardTable({ reports, deleteReportAction }) {
         <ReportPreviewModal
           reportId={previewReport.id}
           clientName={previewReport.clientName}
-          reportMonth={previewReport.reportMonth}
           onClose={closePreview}
         />
       )}

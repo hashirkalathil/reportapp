@@ -16,7 +16,6 @@ export default function EditorWorkspace({
   isSaving = false, 
   lastSaved, 
   clientName,
-  reportMonth,
   onChangeSelection
 }) {
   return (
@@ -26,7 +25,6 @@ export default function EditorWorkspace({
         <div className="flex items-center gap-3 sm:gap-4">
           <div className="flex flex-col">
             <span className="text-sm font-semibold text-gray-900 line-clamp-1">{clientName || 'Untitled'}</span>
-            <span className="text-[10px] sm:text-[11px] text-[#5D5FEF] uppercase tracking-wider font-bold">{reportMonth || 'No Month'}</span>
           </div>
           <button 
             onClick={onChangeSelection}

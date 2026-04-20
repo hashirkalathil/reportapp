@@ -80,7 +80,7 @@ function ReportProse({ html }) {
 }
 
 /* ── Main ────────────────────────────── */
-export default function ReportPreviewModal({ reportId, clientName, reportMonth, onClose }) {
+export default function ReportPreviewModal({ reportId, clientName, onClose }) {
   const [content,       setContent]   = useState(null);
   const [isLoading,     setIsLoading] = useState(true);
   const [fetchError,    setError]     = useState('');
@@ -139,7 +139,6 @@ export default function ReportPreviewModal({ reportId, clientName, reportMonth, 
       <div class="print-cover">
         <h1>${escapeHtml(clientName)}</h1>
         <div class="print-meta">
-          <span>Reporting Month: ${escapeHtml(reportMonth)}</span>
           <span>Printed on: ${now}</span>
         </div>
       </div>
@@ -147,7 +146,7 @@ export default function ReportPreviewModal({ reportId, clientName, reportMonth, 
         ${html}
       </div>
       <div class="print-footer">
-        <span>${escapeHtml(clientName)} — ${escapeHtml(reportMonth)}</span>
+        <span>${escapeHtml(clientName)} — Printed on ${now}</span>
       </div>
     `;
     
@@ -156,7 +155,7 @@ export default function ReportPreviewModal({ reportId, clientName, reportMonth, 
     window.print();
     const cleanup = () => { printElem.current?.remove(); printElem.current = null; window.removeEventListener('afterprint', cleanup); };
     window.addEventListener('afterprint', cleanup);
-  }, [content, clientName, reportMonth]);
+  }, [content, clientName]);
 
   const htmlContent = content ? tiptapToHtml(content) : '';
   const canExport   = !isLoading && !fetchError;
@@ -180,7 +179,6 @@ export default function ReportPreviewModal({ reportId, clientName, reportMonth, 
           <div>
             <p className="text-[0.6rem] font-bold uppercase tracking-[0.2em] text-[#5D5FEF]">Report Preview</p>
             <h2 className="mt-0.5 text-lg font-bold text-gray-800">{clientName}</h2>
-            <p className="text-sm text-gray-400">{reportMonth}</p>
           </div>
           <button
             type="button" onClick={onClose} aria-label="Close preview"

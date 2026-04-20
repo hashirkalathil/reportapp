@@ -1,6 +1,6 @@
 import { revalidatePath } from "next/cache";
-import { requireAdminSession, assertAdminSession } from "../../../../lib/adminAuth";
-import { db, firebaseAdmin } from "../../../../lib/firebaseAdmin";
+import { requireAdminSession, assertAdminSession } from "@/lib/adminAuth";
+import { db, firebaseAdmin } from "@/lib/firebaseAdmin";
 import ClientActions from "./ClientActions";
 
 /* ─── Server Actions ──────────────────────────────── */

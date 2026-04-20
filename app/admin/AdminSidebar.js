@@ -36,7 +36,7 @@ const IconCalendar = () => (
 const NAV = [
   { href: "/admin",         label: "Dashboard", Icon: IconGrid  },
   { href: "/admin/clients", label: "Clients",   Icon: IconUsers },
-  { href: "/admin/months",  label: "Periods",   Icon: IconCalendar },
+  { href: "/admin/reports", label: "Report Forms", Icon: IconCalendar },
 ];
 
 export default function AdminSidebar() {

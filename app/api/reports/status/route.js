@@ -7,7 +7,7 @@ export async function GET(request) {
   const clientId = request.nextUrl.searchParams.get("clientId");
 
   if (!clientId) {
-    return NextResponse.json({ months: [] });
+    return NextResponse.json({ forms: [] });
   }
 
   try {
@@ -15,12 +15,12 @@ export async function GET(request) {
       .where("client_id", "==", clientId)
       .get();
 
-    const months = snapshot.docs.map((doc) => ({
-      month: doc.data().report_month,
+    const forms = snapshot.docs.map((doc) => ({
+      formId: doc.data().form_id,
       status: doc.data().status,
     }));
 
-    return NextResponse.json({ months });
+    return NextResponse.json({ forms });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

@@ -7,32 +7,43 @@ function badRequest(message) {
   return NextResponse.json({ error: message }, { status: 400 });
 }
 
+function matchesFormId(storedFormId, requestFormId) {
+  const normalizedStored = storedFormId || "";
+  const normalizedRequest = requestFormId || "";
+  if (normalizedRequest === "default") {
+    return normalizedStored === "" || normalizedStored === "default";
+  }
+  return normalizedStored === normalizedRequest;
+}
+
 export async function GET(request) {
   const clientId = request.nextUrl.searchParams.get("clientId");
-  const reportMonth = request.nextUrl.searchParams.get("reportMonth");
+  const formId = request.nextUrl.searchParams.get("formId") || "";
 
-  if (!clientId || !reportMonth) {
-    return badRequest("Missing clientId or reportMonth.");
+  if (!clientId) {
+    return badRequest("Missing clientId.");
   }
 
   try {
     const snapshot = await db.collection("reports")
       .where("client_id", "==", clientId)
-      .where("report_month", "==", reportMonth)
       .where("status", "==", "draft")
-      .limit(1)
       .get();
 
-    if (snapshot.empty) {
+    const matchingDoc = snapshot.docs.find((doc) => {
+      const data = doc.data();
+      return matchesFormId(data.form_id, formId);
+    });
+
+    if (!matchingDoc) {
       return NextResponse.json({ report: null });
     }
 
-    const doc = snapshot.docs[0];
-    const data = doc.data();
+    const data = matchingDoc.data();
 
     return NextResponse.json({ 
       report: { 
-        id: doc.id, 
+        id: matchingDoc.id, 
         content: data.content, 
         status: data.status, 
         updated_at: data.updated_at 
@@ -53,37 +64,45 @@ export async function POST(request) {
   }
 
   const clientId = body?.clientId;
-  const reportMonth = body?.reportMonth;
+  const formId = body?.formId || "";
   const content = body?.content ?? {
     type: "doc",
     content: [{ type: "paragraph" }],
   };
 
-  if (!clientId || !reportMonth) {
-    return badRequest("Missing clientId or reportMonth.");
+  if (!clientId) {
+    return badRequest("Missing clientId.");
   }
 
   try {
     const snapshot = await db.collection("reports")
       .where("client_id", "==", clientId)
-      .where("report_month", "==", reportMonth)
       .where("status", "==", "draft")
-      .limit(1)
       .get();
 
-    if (!snapshot.empty) {
-      const doc = snapshot.docs[0];
+    const matchingDoc = snapshot.docs.find((doc) => {
       const data = doc.data();
+      return matchesFormId(data.form_id, formId);
+    });
+
+    if (matchingDoc) {
+      const data = matchingDoc.data();
       return NextResponse.json({ 
-        report: { id: doc.id, content: data.content, status: data.status, updated_at: data.updated_at } 
+        report: {
+          id: matchingDoc.id,
+          content: data.content,
+          status: data.status,
+          updated_at: data.updated_at,
+        }
       });
     }
 
     const now = new Date().toISOString();
     const newDocRef = await db.collection("reports").add({
       client_id: clientId,
-      report_month: reportMonth,
+      form_id: formId,
       content,
+      data: body?.data || {},
       status: "draft",
       created_at: now,
       updated_at: now
@@ -108,24 +127,29 @@ export async function PUT(request) {
 
   const reportId = body?.reportId;
   const clientId = body?.clientId;
-  const reportMonth = body?.reportMonth;
+  const formId = body?.formId || "";
   const content = body?.content;
+  const data = body?.data;
   const status = body?.status;
 
-  if (!reportId || !clientId || !reportMonth) {
-    return badRequest("Missing reportId, clientId, or reportMonth.");
+  if (!reportId || !clientId) {
+    return badRequest("Missing reportId or clientId.");
   }
 
   try {
     const now = new Date().toISOString();
     const updatePayload = {
       client_id: clientId,
-      report_month: reportMonth,
+      form_id: formId,
       updated_at: now
     };
 
     if (content !== undefined) {
       updatePayload.content = content;
+    }
+
+    if (data !== undefined) {
+      updatePayload.data = data;
     }
 
     if (status) {

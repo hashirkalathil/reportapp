@@ -29,7 +29,6 @@ export default function RichTextEditor({ canAutosave }) {
 
   const {
     clientId,
-    reportMonth,
     reportId,
     content,
     error,
@@ -39,7 +38,6 @@ export default function RichTextEditor({ canAutosave }) {
   } = useReportStore(
     useShallow((state) => ({
       clientId: state.clientId,
-      reportMonth: state.reportMonth,
       reportId: state.reportId,
       content: state.content,
       error: state.error,
@@ -66,7 +64,7 @@ export default function RichTextEditor({ canAutosave }) {
     extensions: [
       StarterKit,
       Placeholder.configure({
-        placeholder: "Write your monthly report here...",
+        placeholder: "Write your report here...",
       }),
     ],
     content,
@@ -95,12 +93,12 @@ export default function RichTextEditor({ canAutosave }) {
   });
 
   useEffect(() => {
-    if (!clientId || !reportMonth) {
+    if (!clientId) {
       return;
     }
 
     initReport();
-  }, [clientId, reportMonth, initReport]);
+  }, [clientId, initReport]);
 
   useEffect(() => {
     if (!editor || !content) {

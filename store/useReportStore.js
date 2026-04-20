@@ -30,7 +30,8 @@ async function parseJsonResponse(response) {
 const useReportStore = create((set, get) => ({
   clientId: null,
   clientName: "",
-  reportMonth: "",
+  formId: "",
+  formName: "",
   reportId: null,
   content: cloneEmptyDocument(),
   status: "draft",
@@ -38,11 +39,12 @@ const useReportStore = create((set, get) => ({
   lastSaved: null,
   error: "",
 
-  setSelection: (clientId, clientName, reportMonth) =>
+  setSelection: (clientId, clientName, formId, formName) =>
     set({
       clientId,
       clientName: clientName || "",
-      reportMonth: reportMonth || "",
+      formId: formId || "",
+      formName: formName || "",
       reportId: null,
       content: cloneEmptyDocument(),
       status: "draft",
@@ -58,10 +60,10 @@ const useReportStore = create((set, get) => ({
     }),
 
   initReport: async () => {
-    const { clientId, reportMonth } = get();
-    const selectionKey = `${clientId}:${reportMonth}`;
+    const { clientId, formId } = get();
+    const selectionKey = `${clientId}:${formId || ""}`;
 
-    if (!clientId || !reportMonth) {
+    if (!clientId) {
       return null;
     }
 
@@ -76,13 +78,18 @@ const useReportStore = create((set, get) => ({
         const existingResponse = await fetch(
           `/api/reports?clientId=${encodeURIComponent(
             clientId
-          )}&reportMonth=${encodeURIComponent(reportMonth)}`
+          )}&formId=${encodeURIComponent(
+            formId || ""
+          )}`
         );
         const existingData = await parseJsonResponse(existingResponse);
         const existingReport = existingData.report;
 
         if (existingReport) {
-          if (`${get().clientId}:${get().reportMonth}` !== selectionKey) {
+          if (
+            `${get().clientId}:${get().formId || ""}` !==
+            selectionKey
+          ) {
             return existingReport;
           }
 
@@ -100,7 +107,7 @@ const useReportStore = create((set, get) => ({
 
         const payload = {
           clientId,
-          reportMonth,
+          formId: formId || "",
           content: cloneEmptyDocument(),
         };
 
@@ -114,7 +121,10 @@ const useReportStore = create((set, get) => ({
         const insertData = await parseJsonResponse(insertResponse);
         const insertedReport = insertData.report;
 
-        if (`${get().clientId}:${get().reportMonth}` !== selectionKey) {
+        if (
+          `${get().clientId}:${get().formId || ""}` !==
+          selectionKey
+        ) {
           return insertedReport;
         }
 
@@ -142,10 +152,10 @@ const useReportStore = create((set, get) => ({
     return initPromise;
   },
 
-  autosave: async () => {
-    const { clientId, reportMonth, reportId, content, status } = get();
+  autosave: async (dataOverrides = null) => {
+    const { clientId, formId, reportId, content, status } = get();
 
-    if (!clientId || !reportMonth || !reportId || !content) {
+    if (!clientId || !reportId || !content) {
       return null;
     }
 
@@ -164,9 +174,10 @@ const useReportStore = create((set, get) => ({
         body: JSON.stringify({
           reportId,
           clientId,
-          reportMonth,
+          formId: formId || "",
           content,
           status,
+          data: dataOverrides
         }),
       });
       const result = await parseJsonResponse(response);
@@ -189,7 +200,7 @@ const useReportStore = create((set, get) => ({
     }
   },
 
-  submitReport: async () => {
+  submitReport: async (dataOverrides = null) => {
     const { reportId } = get();
 
     if (!reportId) {
@@ -207,8 +218,9 @@ const useReportStore = create((set, get) => ({
         body: JSON.stringify({
           reportId,
           clientId: get().clientId,
-          reportMonth: get().reportMonth,
+          formId: get().formId || "",
           status: "submitted",
+          data: dataOverrides
         }),
       });
       const result = await parseJsonResponse(response);

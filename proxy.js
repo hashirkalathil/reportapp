@@ -82,7 +82,7 @@ async function verifyAdminSession(token) {
   );
 }
 
-export async function middleware(request) {
+export async function proxy(request) {
   const { pathname } = request.nextUrl;
 
   if (!isProtectedAdminRoute(pathname) && !isProtectedExportRoute(pathname)) {
